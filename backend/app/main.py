@@ -7,9 +7,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import auth, identity, graph, alerts, ai
+from app.api import auth, identity, graph, alerts, ai, scan
 from app.services import db
 from app.services.db import connect_all, close_all
+from app.services.scan_queue import start_scan_worker, stop_scan_worker
 
 app = FastAPI(title="ShadowGraph Backend", version="1.0.0")
 logging.basicConfig(
@@ -31,17 +32,20 @@ app.include_router(identity.router, prefix="/api/identity", tags=["identity"])
 app.include_router(graph.router, prefix="/api/graph", tags=["graph"])
 app.include_router(alerts.router, prefix="/api/alerts", tags=["alerts"])
 app.include_router(ai.router, prefix="/api/ai", tags=["ai-proxy"])
+app.include_router(scan.router, tags=["scan"])
 
 
 @app.on_event("startup")
 async def startup() -> None:
     logger.info("Starting backend services")
     await connect_all()
+    await start_scan_worker()
 
 
 @app.on_event("shutdown")
 async def shutdown() -> None:
     logger.info("Shutting down backend services")
+    await stop_scan_worker()
     await close_all()
 
 

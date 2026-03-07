@@ -57,6 +57,7 @@ ShadowGraph-Hackathon/
   - Authentication (`/api/auth/register`, `/api/auth/login`)
   - Identity ingestion (`/api/identity/signals`)
   - Identity scanning + twin generation (`/api/identity/scan`)
+  - Async scan orchestration (`/scan/start`, `/scan/status`, `/scan/results`)
   - Risk retrieval (`/api/identity/risk`)
   - Graph retrieval (`/api/graph`)
   - Alerts (`/api/alerts`)
@@ -89,6 +90,18 @@ Risk categories:
 - `low` < 0.30
 
 Signals include username collision, profile image reuse, writing-style overlap, and graph anomalies.
+
+## Ingestion Pipeline
+
+- Adapters:
+  - GitHub public profiles
+  - Public website profiles
+  - Generic username discovery across platforms
+  - Profile image metadata
+- Raw signals are stored in MongoDB collection: `raw_identity_signals`.
+- Normalized signals are stored in MongoDB collection: `normalized_identity_signals`.
+- Redis queue key `scan_jobs` powers async scan workers.
+- Graph engine consumes normalized signals to build Neo4j graph nodes/edges.
 
 ## Environment Variables
 
@@ -188,6 +201,22 @@ curl -s -X POST http://localhost:8001/api/identity/scan \
 curl -s http://localhost:8001/api/graph -H "Authorization: Bearer <TOKEN>"
 curl -s http://localhost:8001/api/identity/risk -H "Authorization: Bearer <TOKEN>"
 curl -s http://localhost:8001/api/alerts -H "Authorization: Bearer <TOKEN>"
+```
+
+## Ingestion Scan Queue API
+
+```bash
+# Start asynchronous ingestion scan
+curl -s -X POST http://localhost:8001/scan/start \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"identity_id":"demo-id-1","username":"torvalds","website_url":"https://github.com/torvalds","profile_image_url":"https://avatars.githubusercontent.com/u/1024025?v=4","platforms":["github","x","linkedin","instagram"]}'
+
+# Poll status
+curl -s "http://localhost:8001/scan/status?scan_id=<SCAN_ID>" -H "Authorization: Bearer <TOKEN>"
+
+# Fetch aggregated result payload
+curl -s "http://localhost:8001/scan/results?scan_id=<SCAN_ID>" -H "Authorization: Bearer <TOKEN>"
 ```
 
 ## Seed Data

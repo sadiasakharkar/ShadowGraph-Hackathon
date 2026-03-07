@@ -32,6 +32,14 @@ class ScanRequest(BaseModel):
     seed_platforms: list[str] = ["github", "x", "linkedin", "medium"]
 
 
+class ScanStartRequest(BaseModel):
+    identity_id: str
+    username: str | None = None
+    website_url: str | None = None
+    profile_image_url: str | None = None
+    platforms: list[str] = ["github", "x", "linkedin", "instagram", "medium"]
+
+
 class GraphNode(BaseModel):
     id: str
     label: str

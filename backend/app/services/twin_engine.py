@@ -64,3 +64,64 @@ def build_seed_twin(root_username: str) -> tuple[list[GraphNode], list[GraphEdge
         GraphEdge(source="p:post1", target="r:paper1", relation="references", score=0.66),
     ]
     return nodes, edges
+
+
+def build_twin_from_normalized_signals(identity_id: str, normalized_signals: list[dict]) -> tuple[list[GraphNode], list[GraphEdge]]:
+    if build_identity_graph:
+        graph_input = []
+        for sig in normalized_signals:
+            if sig.get("username"):
+                graph_input.append(
+                    {
+                        "username": sig.get("username"),
+                        "username_similarity": float(sig.get("confidence_score", 0.5)),
+                        "suspicious": float(sig.get("confidence_score", 0.5)) < 0.65,
+                    }
+                )
+
+        graph_nodes, graph_edges = build_identity_graph(graph_input)
+        nodes = [
+            GraphNode(
+                id=(n.id.replace("identity:root", f"u:{identity_id}") if "identity:root" in n.id else n.id),
+                label=n.label,
+                node_type=n.node_type,
+                suspicious=n.suspicious,
+                verified=n.verified,
+                metadata={"source": "graph-engine"},
+            )
+            for n in graph_nodes
+        ]
+        edges = [
+            GraphEdge(
+                source=(e.source.replace("identity:root", f"u:{identity_id}") if "identity:root" in e.source else e.source),
+                target=e.target,
+                relation=e.relation,
+                score=e.score,
+            )
+            for e in graph_edges
+        ]
+
+        for idx, sig in enumerate(normalized_signals):
+            if sig.get("profile_image_url"):
+                img_id = f"img:{idx}"
+                nodes.append(
+                    GraphNode(
+                        id=img_id,
+                        label=f"Profile Image {idx + 1}",
+                        node_type="image",
+                        suspicious=float(sig.get("confidence_score", 0.5)) < 0.6,
+                        verified=float(sig.get("confidence_score", 0.5)) >= 0.8,
+                        metadata={"url": sig.get("profile_image_url")},
+                    )
+                )
+                edges.append(
+                    GraphEdge(
+                        source=(f"u:{identity_id}" if any(n.id == f"u:{identity_id}" for n in nodes) else "account:0"),
+                        target=img_id,
+                        relation="image_similarity",
+                        score=float(sig.get("confidence_score", 0.6)),
+                    )
+                )
+        return nodes, edges
+
+    return build_seed_twin(identity_id)
