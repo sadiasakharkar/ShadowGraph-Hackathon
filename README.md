@@ -164,6 +164,7 @@ Signals include username collision, profile image reuse, writing-style overlap, 
   - opening `http://localhost:3001/dashboard?demo=1`
   - or clicking `Start Guided Demo` inside the dashboard.
 - Demo mode simulates a scan timeline with fixed outputs for repeatable hackathon demos.
+- Offline fallback: if backend APIs are unavailable, dashboard auto-switches to seeded demo data.
 
 ## Autonomous Defense Workflow
 
@@ -191,6 +192,29 @@ Copy `.env.example` and adjust as needed:
 - `JWT_SECRET`, `JWT_ALGORITHM`
 - `AI_SERVICE_URL`
 - `CORS_ORIGINS`
+- `JWT_ACCESS_TOKEN_EXPIRE_MINUTES`
+- `JWT_AUDIENCE`, `JWT_ISSUER`
+- `RATE_LIMIT_REQUESTS_PER_MINUTE`, `RATE_LIMIT_WINDOW_SECONDS`
+- `APP_ENV`, `APP_RELEASE`
+- `SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE`
+
+Create local runtime env file:
+
+```bash
+cp .env.example .env
+```
+
+## Observability and Security
+
+- Structured JSON logs with request-id correlation (`X-Request-ID`).
+- Optional Sentry error tracking via `SENTRY_DSN`.
+- Response security headers enabled by default.
+- JWT hardening:
+  - audience and issuer claim validation
+  - `iat`, `nbf`, and `exp` enforced
+  - configurable access-token TTL
+- API rate limiting middleware:
+  - request window and max requests are environment-driven.
 
 ## Run With Docker
 
@@ -255,12 +279,12 @@ The sequence below validates signup, login, signal ingestion, scan trigger, grap
 # 1) register
 curl -s -X POST http://localhost:8001/api/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"demo_user@shadowgraph.ai","password":"ShadowGraph123","full_name":"Demo User"}'
+  -d '{"email":"demo_user@shadowgraph.ai","password":"ShadowGraph#123","full_name":"Demo User"}'
 
 # 2) login (copy access_token)
 curl -s -X POST http://localhost:8001/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"demo_user@shadowgraph.ai","password":"ShadowGraph123"}'
+  -d '{"email":"demo_user@shadowgraph.ai","password":"ShadowGraph#123"}'
 
 # 3) submit signal
 curl -s -X POST http://localhost:8001/api/identity/signals \
@@ -279,6 +303,19 @@ curl -s http://localhost:8001/api/graph -H "Authorization: Bearer <TOKEN>"
 curl -s http://localhost:8001/api/identity/risk -H "Authorization: Bearer <TOKEN>"
 curl -s http://localhost:8001/alerts -H "Authorization: Bearer <TOKEN>"
 ```
+
+## Automated Tests
+
+- API tests + integration tests:
+  - `./scripts/run_api_tests.sh`
+- UI smoke tests (Playwright):
+  - `./scripts/run_ui_smoke.sh`
+
+## Production and Demo Docs
+
+- Production deployment: `docs/PRODUCTION_DEPLOYMENT.md`
+- Judge demo runbook: `docs/JUDGE_DEMO_RUNBOOK.md`
+- One-command judge demo script: `./scripts/hackathon_judge_demo.sh`
 
 ## Ingestion Scan Queue API
 

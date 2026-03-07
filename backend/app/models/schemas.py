@@ -1,11 +1,22 @@
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=8)
+    password: str = Field(min_length=12)
     full_name: str
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_strength(cls, value: str) -> str:
+        has_upper = any(ch.isupper() for ch in value)
+        has_lower = any(ch.islower() for ch in value)
+        has_digit = any(ch.isdigit() for ch in value)
+        has_symbol = any(not ch.isalnum() for ch in value)
+        if not (has_upper and has_lower and has_digit and has_symbol):
+            raise ValueError("Password must include upper/lowercase letters, digits, and symbols")
+        return value
 
 
 class LoginRequest(BaseModel):

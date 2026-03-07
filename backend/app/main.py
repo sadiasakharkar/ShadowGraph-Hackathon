@@ -1,24 +1,30 @@
 import logging
 import os
 import time
+import uuid
 
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api import auth, identity, graph, alerts, ai, scan, graph_public, risk_analysis
 from app.graph.identity_graph import ensure_graph_schema
+from app.middleware.rate_limit import rate_limit_middleware
+from app.observability.error_tracking import init_error_tracking
+from app.observability.logging import JsonFormatter
 from app.services import db
 from app.services.db import connect_all, close_all
 from app.services.scan_queue import start_scan_worker, stop_scan_worker
 
 app = FastAPI(title="ShadowGraph Backend", version="1.0.0")
-logging.basicConfig(
-    level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO),
-    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
-)
+_handler = logging.StreamHandler()
+_handler.setFormatter(JsonFormatter())
+root_logger = logging.getLogger()
+root_logger.handlers = [_handler]
+root_logger.setLevel(getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO))
 logger = logging.getLogger("shadowgraph.backend")
+init_error_tracking()
 
 app.add_middleware(
     CORSMiddleware,
@@ -40,6 +46,8 @@ app.include_router(risk_analysis.router, tags=["threat-simulation"])
 
 @app.on_event("startup")
 async def startup() -> None:
+    if os.getenv("APP_ENV", "development") == "production" and os.getenv("JWT_SECRET", "replace_me_super_secret") == "replace_me_super_secret":
+        raise RuntimeError("JWT_SECRET must be set in production")
     logger.info("Starting backend services")
     await connect_all()
     await ensure_graph_schema()
@@ -61,10 +69,39 @@ async def health() -> dict:
 @app.middleware("http")
 async def request_logging_middleware(request, call_next):
     started = time.perf_counter()
+    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
     response = await call_next(request)
     elapsed_ms = (time.perf_counter() - started) * 1000
-    logger.info("%s %s -> %s in %.2fms", request.method, request.url.path, response.status_code, elapsed_ms)
+    response.headers["X-Request-ID"] = request_id
+    logger.info(
+        "%s %s -> %s in %.2fms",
+        request.method,
+        request.url.path,
+        response.status_code,
+        elapsed_ms,
+        extra={"request_id": request_id},
+    )
     return response
+
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+app.middleware("http")(rate_limit_middleware)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled error while processing %s", request.url.path)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
 @app.get("/health/backend")

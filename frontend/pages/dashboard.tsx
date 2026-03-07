@@ -25,6 +25,7 @@ export default function Dashboard() {
   const [demoMode, setDemoMode] = useState(false);
   const [loadingScan, setLoadingScan] = useState(false);
   const [demoStep, setDemoStep] = useState(0);
+  const [offlineFallback, setOfflineFallback] = useState(false);
 
   const demoQueryMode = useMemo(() => router.query.demo === '1', [router.query.demo]);
 
@@ -60,20 +61,33 @@ export default function Dashboard() {
     };
 
     const loadAll = async () => {
-      const [graphRes, riskRes, alertsRes, analysisRes] = await Promise.all([
-        api.get('/graph/latest'),
-        api.get('/api/identity/risk'),
-        api.get('/alerts'),
-        api.get('/risk/analysis')
-      ]);
-      setNodes(graphRes.data.nodes || []);
-      setEdges(graphRes.data.edges || []);
-      setGraphVersionId(graphRes.data.graph_version_id || '');
-      setRisk(riskRes.data.risk || {});
-      setAlerts(alertsRes.data.alerts || []);
-      const analysis = analysisRes.data?.analysis || null;
-      setRiskAnalysis(analysis);
-      setAttackPathKeys((analysis?.attack_paths || []).map((p: any) => `${p.source}|${p.target}`));
+      try {
+        const [graphRes, riskRes, alertsRes, analysisRes] = await Promise.all([
+          api.get('/graph/latest'),
+          api.get('/api/identity/risk'),
+          api.get('/alerts'),
+          api.get('/risk/analysis')
+        ]);
+        setOfflineFallback(false);
+        setNodes(graphRes.data.nodes || []);
+        setEdges(graphRes.data.edges || []);
+        setGraphVersionId(graphRes.data.graph_version_id || '');
+        setRisk(riskRes.data.risk || {});
+        setAlerts(alertsRes.data.alerts || []);
+        const analysis = analysisRes.data?.analysis || null;
+        setRiskAnalysis(analysis);
+        setAttackPathKeys((analysis?.attack_paths || []).map((p: any) => `${p.source}|${p.target}`));
+      } catch {
+        setOfflineFallback(true);
+        setDemoMode(true);
+        setNodes(DEMO_GRAPH.nodes);
+        setEdges(DEMO_GRAPH.edges);
+        setGraphVersionId(DEMO_GRAPH.graph_version_id);
+        setRisk(DEMO_RISK);
+        setRiskAnalysis(DEMO_ANALYSIS);
+        setAlerts(DEMO_ALERTS);
+        setAttackPathKeys((DEMO_ANALYSIS.attack_paths || []).map((p: any) => `${p.source}|${p.target}`));
+      }
     };
 
     if (demoMode) {
@@ -127,6 +141,7 @@ export default function Dashboard() {
           <p className="text-sm text-slate-300">
             {demoMode ? `Deterministic scenario: ${DEMO_STEPS[Math.min(demoStep, DEMO_STEPS.length - 1)]}` : 'Streaming latest graph intelligence and autonomous defense alerts.'}
           </p>
+          {offlineFallback ? <p className="mt-1 text-xs text-amber-200">Offline fallback active: using seeded demo data.</p> : null}
         </div>
         <button
           onClick={toggleDemoMode}
