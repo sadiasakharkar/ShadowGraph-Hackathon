@@ -9,6 +9,7 @@ from app.graph.identity_graph import upsert_graph
 from app.services import db
 from app.services.ingestion.normalizer import normalize_signals
 from app.services.ingestion.orchestrator import run_ingestion_adapters
+from app.services.ai_client import username_similarity, stylometric_similarity, image_similarity
 from app.services.risk import compute_risk
 from app.services.twin_engine import build_twin_from_normalized_signals
 
@@ -122,6 +123,25 @@ async def process_scan_job(job: dict[str, Any]) -> None:
         normalized = normalize_signals(raw_signals, identity_id)
         for item in normalized:
             item.update({"scan_id": scan_id, "user_id": user_id})
+
+        # AI fingerprint scoring integration before graph construction.
+        anchor_username = identity_input.get("username") or identity_id
+        anchor_text = next((x.get("bio_text", "") for x in normalized if x.get("bio_text")), "")
+        anchor_image = next((x.get("profile_image_url", "") for x in normalized if x.get("profile_image_url")), "")
+        for item in normalized:
+            ai_scores: dict[str, float] = {}
+            if item.get("username"):
+                ai_scores["username_similarity"] = await username_similarity(anchor_username, item.get("username", ""))
+            if item.get("bio_text") and anchor_text:
+                ai_scores["text_similarity"] = await stylometric_similarity(anchor_text, item.get("bio_text", ""))
+            if item.get("profile_image_url") and anchor_image:
+                ai_scores["image_similarity"] = await image_similarity(anchor_image, item.get("profile_image_url", ""))
+
+            if ai_scores:
+                blend = sum(ai_scores.values()) / len(ai_scores)
+                base_conf = float(item.get("confidence_score", 0.5))
+                item["ai_scores"] = ai_scores
+                item["confidence_score"] = round((0.55 * base_conf) + (0.45 * blend), 4)
 
         if normalized:
             await db.mongo_db.normalized_identity_signals.insert_many(normalized)

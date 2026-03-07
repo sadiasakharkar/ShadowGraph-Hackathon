@@ -69,6 +69,9 @@ ShadowGraph-Hackathon/
   - `/username-similarity`
   - `/stylometric-similarity`
   - `/anomaly-detection`
+  - `/ai/username-similarity`
+  - `/ai/image-similarity`
+  - `/ai/text-similarity`
 
 - Data Layer
   - MongoDB: users, scan results, alerts context.
@@ -116,6 +119,24 @@ Signals include username collision, profile image reuse, writing-style overlap, 
   - `timestamp`
 - Version metadata is also persisted in MongoDB collection `graph_versions`.
 - Graph schema details: `docs/GRAPH_SCHEMA.md`.
+
+## ML Identity Fingerprinting Pipelines
+
+- Username similarity pipeline:
+  - dataset: `ai-services/datasets/username_pairs.csv`
+  - model: `ai-services/models/username_similarity_model.joblib`
+- Image identity pipeline:
+  - dataset: `ai-services/datasets/image_pairs.csv`
+  - embeddings from ResNet18 feature extractor
+  - model: `ai-services/models/image_similarity_model.joblib`
+- Stylometric text pipeline:
+  - dataset: `ai-services/datasets/text_pairs.csv`
+  - features: sentence length, vocabulary distribution, punctuation patterns
+  - model: `ai-services/models/text_similarity_model.joblib`
+- Evaluation reports:
+  - `ai-services/reports/evaluation_report.md`
+  - `ai-services/reports/evaluation_summary.json`
+- Full pipeline guide: `docs/ML_PIPELINES.md`.
 
 ## Environment Variables
 

@@ -1,0 +1,8 @@
+{
+  "model": "image_similarity_model",
+  "dataset": "image_pairs.csv",
+  "samples": 24,
+  "precision": 1.0,
+  "recall": 0.3333,
+  "f1": 0.5
+}

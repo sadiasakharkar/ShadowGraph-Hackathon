@@ -1,0 +1,19 @@
+left,right,label,author_left,author_right
+"yo i pushed another build today! super fast deploy, very chill, less blockers now.","new sprint, new bugs, but we fix and ship. quick wins matter, keep the flow moving.",1,author_b,author_b
+"new sprint, new bugs, but we fix and ship. quick wins matter, keep the flow moving.","team sync was good today; we kept it short, solved auth bug, and moved to next task.",1,author_b,author_b
+"team sync was good today; we kept it short, solved auth bug, and moved to next task.","Threat modeling begins with context. Build evidence chains, then score each anomaly with explainability.",0,author_b,author_a
+I map identity risks using careful graph analysis. Signals should be validated before trust.,"Threat modeling begins with context. Build evidence chains, then score each anomaly with explainability.",1,author_a,author_a
+Identity integrity is a socio-technical challenge; attribution requires robust statistical framing.,A resilient platform quantifies uncertainty and updates priors as new public artifacts emerge.,1,author_c,author_c
+"new sprint, new bugs, but we fix and ship. quick wins matter, keep the flow moving.","Stylometric drift across channels can indicate imitation, especially when punctuation entropy shifts.",0,author_b,author_c
+"new sprint, new bugs, but we fix and ship. quick wins matter, keep the flow moving.","Threat modeling begins with context. Build evidence chains, then score each anomaly with explainability.",0,author_b,author_a
+"Threat modeling begins with context. Build evidence chains, then score each anomaly with explainability.",A resilient platform quantifies uncertainty and updates priors as new public artifacts emerge.,0,author_a,author_c
+"new sprint, new bugs, but we fix and ship. quick wins matter, keep the flow moving.","Our security workflow focuses on repeatable controls, deterministic scans, and transparent alerts.",0,author_b,author_a
+I map identity risks using careful graph analysis. Signals should be validated before trust.,"Our security workflow focuses on repeatable controls, deterministic scans, and transparent alerts.",1,author_a,author_a
+"Threat modeling begins with context. Build evidence chains, then score each anomaly with explainability.","Our security workflow focuses on repeatable controls, deterministic scans, and transparent alerts.",1,author_a,author_a
+Identity integrity is a socio-technical challenge; attribution requires robust statistical framing.,"yo i pushed another build today! super fast deploy, very chill, less blockers now.",0,author_c,author_b
+"Stylometric drift across channels can indicate imitation, especially when punctuation entropy shifts.",A resilient platform quantifies uncertainty and updates priors as new public artifacts emerge.,1,author_c,author_c
+Identity integrity is a socio-technical challenge; attribution requires robust statistical framing.,"yo i pushed another build today! super fast deploy, very chill, less blockers now.",0,author_c,author_b
+I map identity risks using careful graph analysis. Signals should be validated before trust.,"Stylometric drift across channels can indicate imitation, especially when punctuation entropy shifts.",0,author_a,author_c
+Identity integrity is a socio-technical challenge; attribution requires robust statistical framing.,"Stylometric drift across channels can indicate imitation, especially when punctuation entropy shifts.",1,author_c,author_c
+A resilient platform quantifies uncertainty and updates priors as new public artifacts emerge.,I map identity risks using careful graph analysis. Signals should be validated before trust.,0,author_c,author_a
+"yo i pushed another build today! super fast deploy, very chill, less blockers now.","team sync was good today; we kept it short, solved auth bug, and moved to next task.",1,author_b,author_b

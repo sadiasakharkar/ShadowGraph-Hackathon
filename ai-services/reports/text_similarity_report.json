@@ -1,0 +1,8 @@
+{
+  "model": "text_similarity_model",
+  "dataset": "text_pairs.csv",
+  "samples": 18,
+  "precision": 0.6667,
+  "recall": 1.0,
+  "f1": 0.8
+}
