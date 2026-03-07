@@ -157,6 +157,14 @@ Signals include username collision, profile image reuse, writing-style overlap, 
 - API:
   - `GET /risk/analysis`
 
+## Guided Demo Mode
+
+- Dashboard supports deterministic presentation mode with seeded graph/risk/alerts data.
+- Enable by:
+  - opening `http://localhost:3001/dashboard?demo=1`
+  - or clicking `Start Guided Demo` inside the dashboard.
+- Demo mode simulates a scan timeline with fixed outputs for repeatable hackathon demos.
+
 ## Autonomous Defense Workflow
 
 - Converts threat simulation and risk insights into actionable playbooks:

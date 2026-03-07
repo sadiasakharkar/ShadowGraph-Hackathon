@@ -1,6 +1,8 @@
+import { motion } from 'framer-motion';
+
 export default function NodeInspector({ node }: { node: any }) {
   return (
-    <div className="glass rounded-2xl p-4">
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-4">
       <h3 className="mb-2 text-lg font-semibold">Identity Metadata</h3>
       {node ? (
         <>
@@ -17,6 +19,6 @@ export default function NodeInspector({ node }: { node: any }) {
       ) : (
         <p className="text-sm text-slate-300">Click a node in the 3D graph.</p>
       )}
-    </div>
+    </motion.div>
   );
 }

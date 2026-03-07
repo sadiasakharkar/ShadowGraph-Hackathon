@@ -1,3 +1,5 @@
+import { motion } from 'framer-motion';
+
 type AlertsPanelProps = {
   alerts: any[];
   onAcknowledge: (id: string) => Promise<void>;
@@ -12,12 +14,18 @@ const stateClass: Record<string, string> = {
 
 export default function AlertsPanel({ alerts, onAcknowledge, onResolve }: AlertsPanelProps) {
   return (
-    <div className="glass rounded-2xl p-4">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-4">
       <h3 className="mb-3 text-lg font-semibold">Autonomous Identity Defense</h3>
       <div className="space-y-3">
         {alerts?.length ? (
-          alerts.map((a) => (
-            <div key={a.id} className="rounded-xl border border-slate-700/70 bg-slate-900/50 p-3">
+          alerts.map((a, index) => (
+            <motion.div
+              key={a.id}
+              initial={{ opacity: 0, y: 8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: index * 0.06 }}
+              className="rounded-xl border border-slate-700/70 bg-slate-900/50 p-3"
+            >
               <p className="font-semibold text-neon">{a.title}</p>
               <p className="text-xs uppercase text-danger">Severity: {a.severity}</p>
               <p className={`text-xs uppercase ${stateClass[a.state] || 'text-slate-300'}`}>State: {a.state}</p>
@@ -38,12 +46,12 @@ export default function AlertsPanel({ alerts, onAcknowledge, onResolve }: Alerts
                   Resolve
                 </button>
               </div>
-            </div>
+            </motion.div>
           ))
         ) : (
           <p className="text-sm text-slate-300">No active alerts.</p>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
