@@ -30,6 +30,17 @@ class AuthResponse(BaseModel):
     user_id: str
 
 
+class OAuthStartResponse(BaseModel):
+    authorization_url: str
+    state: str
+
+
+class OAuthCallbackRequest(BaseModel):
+    code: str
+    state: str
+    redirect_uri: str
+
+
 class IdentitySignal(BaseModel):
     platform: str
     username: str

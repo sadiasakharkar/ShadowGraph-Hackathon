@@ -19,6 +19,17 @@ export default function Signup() {
     }
   };
 
+  const startOAuth = async (provider: 'google' | 'github') => {
+    setErr('');
+    try {
+      const redirectUri = `${window.location.origin}/auth/callback/${provider}`;
+      const { data } = await api.get(`/api/auth/oauth/${provider}/url`, { params: { redirect_uri: redirectUri } });
+      window.location.href = data.authorization_url;
+    } catch (error: any) {
+      setErr(error?.response?.data?.detail || `${provider} signup failed`);
+    }
+  };
+
   return (
     <Layout>
       <form onSubmit={submit} className="glass mx-auto mt-10 max-w-md rounded-2xl p-6">
@@ -28,6 +39,13 @@ export default function Signup() {
         <input type="password" className="mb-3 w-full rounded bg-black/30 p-3" placeholder="Password" onChange={(e) => setForm({ ...form, password: e.target.value })} />
         {err ? <p className="mb-3 text-sm text-danger">{err}</p> : null}
         <button className="w-full rounded bg-neon p-3 font-semibold text-black">Sign Up</button>
+        <div className="my-4 h-px bg-slate-700" />
+        <button type="button" className="mb-2 w-full rounded border border-slate-500 p-3 text-sm" onClick={() => startOAuth('google')}>
+          Sign up with Google
+        </button>
+        <button type="button" className="w-full rounded border border-slate-500 p-3 text-sm" onClick={() => startOAuth('github')}>
+          Sign up with GitHub
+        </button>
       </form>
     </Layout>
   );

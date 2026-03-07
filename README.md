@@ -54,7 +54,7 @@ ShadowGraph-Hackathon/
   - Node click/hover metadata inspection.
 
 - Backend (`FastAPI`)
-  - Authentication (`/api/auth/register`, `/api/auth/login`)
+  - Authentication (`/api/auth/register`, `/api/auth/login`, Google/GitHub OAuth)
   - Identity ingestion (`/api/identity/signals`)
   - Identity scanning + twin generation (`/api/identity/scan`)
   - Async scan orchestration (`/scan/start`, `/scan/status`, `/scan/results`)
@@ -197,6 +197,8 @@ Copy `.env.example` and adjust as needed:
 - `RATE_LIMIT_REQUESTS_PER_MINUTE`, `RATE_LIMIT_WINDOW_SECONDS`
 - `APP_ENV`, `APP_RELEASE`
 - `SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE`
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+- `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
 
 Create local runtime env file:
 
@@ -303,6 +305,19 @@ curl -s http://localhost:8001/api/graph -H "Authorization: Bearer <TOKEN>"
 curl -s http://localhost:8001/api/identity/risk -H "Authorization: Bearer <TOKEN>"
 curl -s http://localhost:8001/alerts -H "Authorization: Bearer <TOKEN>"
 ```
+
+## OAuth Authentication Setup
+
+- Google and GitHub social login are supported from both Login and Signup pages.
+- Configure credentials in `.env`:
+  - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+  - `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
+- Set provider redirect URLs to:
+  - `http://localhost:3001/auth/callback/google`
+  - `http://localhost:3001/auth/callback/github`
+- OAuth APIs:
+  - `GET /api/auth/oauth/{provider}/url?redirect_uri=...`
+  - `POST /api/auth/oauth/{provider}/callback`
 
 ## Automated Tests
 
