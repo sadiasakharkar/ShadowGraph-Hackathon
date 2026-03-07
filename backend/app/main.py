@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import auth, identity, graph, alerts, ai, scan, graph_public
+from app.api import auth, identity, graph, alerts, ai, scan, graph_public, risk_analysis
 from app.graph.identity_graph import ensure_graph_schema
 from app.services import db
 from app.services.db import connect_all, close_all
@@ -35,6 +35,7 @@ app.include_router(alerts.router, prefix="/api/alerts", tags=["alerts"])
 app.include_router(ai.router, prefix="/api/ai", tags=["ai-proxy"])
 app.include_router(scan.router, tags=["scan"])
 app.include_router(graph_public.router, tags=["graph-versioned"])
+app.include_router(risk_analysis.router, tags=["threat-simulation"])
 
 
 @app.on_event("startup")

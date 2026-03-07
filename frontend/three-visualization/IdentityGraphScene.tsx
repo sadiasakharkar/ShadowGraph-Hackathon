@@ -40,7 +40,7 @@ function GraphNode({ node, index, onSelect }: { node: any; index: number; onSele
   );
 }
 
-function GraphEdges({ nodes, edges }: { nodes: any[]; edges: any[] }) {
+function GraphEdges({ nodes, edges, attackPaths }: { nodes: any[]; edges: any[]; attackPaths?: Set<string> }) {
   const nodePos = useMemo(() => {
     const map = new Map<string, [number, number, number]>();
     nodes.forEach((n, index) => {
@@ -56,13 +56,18 @@ function GraphEdges({ nodes, edges }: { nodes: any[]; edges: any[] }) {
         const a = nodePos.get(e.source);
         const b = nodePos.get(e.target);
         if (!a || !b) return null;
-        return <Line key={i} points={[a, b]} color={String(e.relation || '').toLowerCase().includes('similar') ? '#ff7b95' : '#2be4ff'} lineWidth={1} />;
+        const key = `${e.source}|${e.target}`;
+        const reverse = `${e.target}|${e.source}`;
+        const isAttackPath = attackPaths?.has(key) || attackPaths?.has(reverse);
+        const color = isAttackPath ? '#ff355e' : String(e.relation || '').toLowerCase().includes('similar') ? '#ff7b95' : '#2be4ff';
+        return <Line key={i} points={[a, b]} color={color} lineWidth={isAttackPath ? 2 : 1} />;
       })}
     </>
   );
 }
 
-export default function IdentityGraphScene({ nodes, edges, onSelect }: { nodes: any[]; edges: any[]; onSelect: (n: any) => void }) {
+export default function IdentityGraphScene({ nodes, edges, onSelect, attackPathKeys }: { nodes: any[]; edges: any[]; onSelect: (n: any) => void; attackPathKeys?: string[] }) {
+  const attackPaths = useMemo(() => new Set(attackPathKeys || []), [attackPathKeys]);
   return (
     <div className="glass h-[520px] w-full overflow-hidden rounded-2xl shadow-neon">
       <Canvas camera={{ position: [0, 1, 7], fov: 52 }}>
@@ -70,7 +75,7 @@ export default function IdentityGraphScene({ nodes, edges, onSelect }: { nodes: 
         <pointLight position={[4, 4, 4]} intensity={2} color="#2be4ff" />
         <pointLight position={[-4, -2, 1]} intensity={1.5} color="#ff355e" />
         <Stars radius={40} depth={30} count={1500} factor={2} saturation={0} />
-        <GraphEdges nodes={nodes} edges={edges} />
+        <GraphEdges nodes={nodes} edges={edges} attackPaths={attackPaths} />
         {nodes.map((node, i) => (
           <GraphNode node={node} index={i} key={node.id} onSelect={onSelect} />
         ))}

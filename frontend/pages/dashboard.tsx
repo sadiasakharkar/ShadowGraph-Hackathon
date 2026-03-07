@@ -7,6 +7,7 @@ import IdentityGraphScene from '../three-visualization/IdentityGraphScene';
 import RiskPanel from '../components/RiskPanel';
 import AlertsPanel from '../components/AlertsPanel';
 import NodeInspector from '../components/NodeInspector';
+import ThreatSimulationPanel from '../components/ThreatSimulationPanel';
 
 export default function Dashboard() {
   const ready = useAuth();
@@ -16,21 +17,27 @@ export default function Dashboard() {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const [graphVersionId, setGraphVersionId] = useState<string>('');
+  const [riskAnalysis, setRiskAnalysis] = useState<any>(null);
+  const [attackPathKeys, setAttackPathKeys] = useState<string[]>([]);
 
   useEffect(() => {
     if (!ready) return;
 
     const loadAll = async () => {
-      const [graphRes, riskRes, alertsRes] = await Promise.all([
+      const [graphRes, riskRes, alertsRes, analysisRes] = await Promise.all([
         api.get('/graph/latest'),
         api.get('/api/identity/risk'),
-        api.get('/api/alerts')
+        api.get('/api/alerts'),
+        api.get('/risk/analysis')
       ]);
       setNodes(graphRes.data.nodes || []);
       setEdges(graphRes.data.edges || []);
       setGraphVersionId(graphRes.data.graph_version_id || '');
       setRisk(riskRes.data.risk || {});
       setAlerts(alertsRes.data.alerts || []);
+      const analysis = analysisRes.data?.analysis || null;
+      setRiskAnalysis(analysis);
+      setAttackPathKeys((analysis?.attack_paths || []).map((p: any) => `${p.source}|${p.target}`));
     };
 
     loadAll();
@@ -47,10 +54,11 @@ export default function Dashboard() {
         <div className="lg:col-span-2">
           <h2 className="mb-3 text-xl font-semibold">Identity Graph Intelligence</h2>
           {graphVersionId ? <p className="mb-2 text-xs text-slate-400">Graph Version: {graphVersionId}</p> : null}
-          <IdentityGraphScene nodes={nodes} edges={edges} onSelect={setSelectedNode} />
+          <IdentityGraphScene nodes={nodes} edges={edges} onSelect={setSelectedNode} attackPathKeys={attackPathKeys} />
         </div>
         <div className="space-y-4">
           <RiskPanel risk={risk} />
+          <ThreatSimulationPanel analysis={riskAnalysis} />
           <NodeInspector node={selectedNode} />
         </div>
       </motion.div>

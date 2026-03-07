@@ -59,6 +59,7 @@ ShadowGraph-Hackathon/
   - Identity scanning + twin generation (`/api/identity/scan`)
   - Async scan orchestration (`/scan/start`, `/scan/status`, `/scan/results`)
   - Versioned graph APIs (`/graph/latest`, `/graph/version/{id}`)
+  - Threat simulation API (`/risk/analysis`)
   - Risk retrieval (`/api/identity/risk`)
   - Graph retrieval (`/api/graph`)
   - Alerts (`/api/alerts`)
@@ -137,6 +138,24 @@ Signals include username collision, profile image reuse, writing-style overlap, 
   - `ai-services/reports/evaluation_report.md`
   - `ai-services/reports/evaluation_summary.json`
 - Full pipeline guide: `docs/ML_PIPELINES.md`.
+
+## Threat Simulation Engine
+
+- Simulates attack paths from the latest identity graph:
+  - fake account creation
+  - image reuse
+  - username impersonation
+- Computes:
+  - attack likelihood
+  - blast radius
+  - target platform impact
+- Returns explainable outputs:
+  - risk score
+  - risk factors
+  - affected nodes
+  - recommended actions
+- API:
+  - `GET /risk/analysis`
 
 ## Environment Variables
 

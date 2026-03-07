@@ -168,8 +168,8 @@ export default function Home() {
           </div>
           <div className="glass rounded-3xl p-5 text-slate-200">
             <p className="text-lg text-cyan-200">Simulated attack propagation:</p>
-            <p className="mt-3">Fake LinkedIn profile -> recruiter network</p>
-            <p>Fake Instagram account -> follower network</p>
+            <p className="mt-3">Fake LinkedIn profile -&gt; recruiter network</p>
+            <p>Fake Instagram account -&gt; follower network</p>
             <p className="mt-5 text-sm text-slate-300">
               ShadowGraph predicts spread paths from suspicious nodes, quantifies impact, and initiates autonomous containment actions.
             </p>
