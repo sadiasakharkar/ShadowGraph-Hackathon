@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from app.models.schemas import GraphNode, GraphEdge
 
 try:
@@ -67,6 +69,7 @@ def build_seed_twin(root_username: str) -> tuple[list[GraphNode], list[GraphEdge
 
 
 def build_twin_from_normalized_signals(identity_id: str, normalized_signals: list[dict]) -> tuple[list[GraphNode], list[GraphEdge]]:
+    now = datetime.now(timezone.utc)
     if build_identity_graph:
         graph_input = []
         for sig in normalized_signals:
@@ -88,6 +91,9 @@ def build_twin_from_normalized_signals(identity_id: str, normalized_signals: lis
                 suspicious=n.suspicious,
                 verified=n.verified,
                 metadata={"source": "graph-engine"},
+                confidence_score=0.75 if not n.suspicious else 0.45,
+                source="normalized_signals",
+                timestamp=now,
             )
             for n in graph_nodes
         ]
@@ -97,29 +103,119 @@ def build_twin_from_normalized_signals(identity_id: str, normalized_signals: lis
                 target=e.target,
                 relation=e.relation,
                 score=e.score,
+                confidence_score=float(e.score),
+                source_ref="graph-engine",
+                timestamp=now,
             )
             for e in graph_edges
         ]
 
+        # Anomaly rule: repeated profile image URLs across multiple accounts indicate suspicious reuse.
+        image_to_accounts: dict[str, list[str]] = {}
+        image_node_by_url: dict[str, str] = {}
         for idx, sig in enumerate(normalized_signals):
             if sig.get("profile_image_url"):
+                image_to_accounts.setdefault(sig.get("profile_image_url"), []).append(f"account:{idx}")
+
+        for idx, sig in enumerate(normalized_signals):
+            if sig.get("profile_image_url"):
+                image_url = sig.get("profile_image_url")
                 img_id = f"img:{idx}"
+                img_reuse = len(image_to_accounts.get(image_url, [])) > 1
+                suspicious = float(sig.get("confidence_score", 0.5)) < 0.6 or img_reuse
                 nodes.append(
                     GraphNode(
                         id=img_id,
                         label=f"Profile Image {idx + 1}",
                         node_type="image",
-                        suspicious=float(sig.get("confidence_score", 0.5)) < 0.6,
-                        verified=float(sig.get("confidence_score", 0.5)) >= 0.8,
-                        metadata={"url": sig.get("profile_image_url")},
+                        suspicious=suspicious,
+                        verified=float(sig.get("confidence_score", 0.5)) >= 0.8 and not img_reuse,
+                        metadata={"url": image_url, "image_reuse": img_reuse},
+                        confidence_score=float(sig.get("confidence_score", 0.5)),
+                        source=sig.get("platform", "unknown"),
+                        timestamp=now,
                     )
                 )
                 edges.append(
                     GraphEdge(
                         source=(f"u:{identity_id}" if any(n.id == f"u:{identity_id}" for n in nodes) else "account:0"),
                         target=img_id,
-                        relation="image_similarity",
+                        relation="has_image",
                         score=float(sig.get("confidence_score", 0.6)),
+                        confidence_score=float(sig.get("confidence_score", 0.6)),
+                        source_ref=sig.get("platform", "unknown"),
+                        timestamp=now,
+                    )
+                )
+                # Image anomaly relationship across duplicate profile images.
+                previous_img = image_node_by_url.get(image_url)
+                if previous_img:
+                    edges.append(
+                        GraphEdge(
+                            source=previous_img,
+                            target=img_id,
+                            relation="image_similarity",
+                            score=0.93,
+                            confidence_score=0.93,
+                            source_ref="anomaly_rule:image_reuse",
+                            timestamp=now,
+                        )
+                    )
+                image_node_by_url[image_url] = img_id
+
+            if sig.get("bio_text"):
+                txt_id = f"txt:{idx}"
+                text_conf = float(sig.get("confidence_score", 0.5))
+                nodes.append(
+                    GraphNode(
+                        id=txt_id,
+                        label=f"Text Artifact {idx + 1}",
+                        node_type="text_artifact",
+                        suspicious=text_conf < 0.55,
+                        verified=text_conf > 0.8,
+                        metadata={"excerpt": str(sig.get("bio_text"))[:160]},
+                        confidence_score=text_conf,
+                        source=sig.get("platform", "unknown"),
+                        timestamp=now,
+                    )
+                )
+                edges.append(
+                    GraphEdge(
+                        source=(f"u:{identity_id}" if any(n.id == f"u:{identity_id}" for n in nodes) else "account:0"),
+                        target=txt_id,
+                        relation="text_similarity",
+                        score=text_conf,
+                        confidence_score=text_conf,
+                        source_ref=sig.get("platform", "unknown"),
+                        timestamp=now,
+                    )
+                )
+
+            # Repository node creation rule for GitHub-discovered accounts.
+            if sig.get("platform") == "github" and sig.get("username"):
+                repo_id = f"repo:{sig.get('username')}"
+                nodes.append(
+                    GraphNode(
+                        id=repo_id,
+                        label=f"{sig.get('username')}/public",
+                        node_type="repository",
+                        suspicious=False,
+                        verified=float(sig.get("confidence_score", 0.5)) > 0.8,
+                        metadata={"origin_platform": "github"},
+                        confidence_score=float(sig.get("confidence_score", 0.5)),
+                        source="github_profile",
+                        timestamp=now,
+                    )
+                )
+                edges.append(
+                    GraphEdge(
+                        source=(f"u:{identity_id}" if any(n.id == f"u:{identity_id}" for n in nodes) else "account:0"),
+                        target=repo_id,
+                        relation="connected_to",
+                        score=0.7,
+                        confidence_score=0.7,
+                        source_ref="github_profile",
+                        timestamp=now,
                     )
                 )
         return nodes, edges

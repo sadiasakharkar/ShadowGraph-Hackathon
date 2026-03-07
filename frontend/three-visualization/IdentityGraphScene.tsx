@@ -56,7 +56,7 @@ function GraphEdges({ nodes, edges }: { nodes: any[]; edges: any[] }) {
         const a = nodePos.get(e.source);
         const b = nodePos.get(e.target);
         if (!a || !b) return null;
-        return <Line key={i} points={[a, b]} color={e.relation.includes('similarity') ? '#ff7b95' : '#2be4ff'} lineWidth={1} />;
+        return <Line key={i} points={[a, b]} color={String(e.relation || '').toLowerCase().includes('similar') ? '#ff7b95' : '#2be4ff'} lineWidth={1} />;
       })}
     </>
   );

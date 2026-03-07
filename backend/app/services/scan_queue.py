@@ -126,8 +126,32 @@ async def process_scan_job(job: dict[str, Any]) -> None:
         if normalized:
             await db.mongo_db.normalized_identity_signals.insert_many(normalized)
 
+        graph_version_id = f"gv-{scan_id}"
         nodes, edges = build_twin_from_normalized_signals(identity_id, normalized)
-        await upsert_graph(user_id, nodes, edges)
+        graph_meta = await upsert_graph(
+            user_id,
+            nodes,
+            edges,
+            graph_version_id=graph_version_id,
+            scan_id=scan_id,
+            source="scan_pipeline",
+        )
+        await db.mongo_db.graph_versions.update_one(
+            {"graph_version_id": graph_version_id, "user_id": user_id},
+            {
+                "$set": {
+                    "graph_version_id": graph_version_id,
+                    "scan_id": scan_id,
+                    "user_id": user_id,
+                    "identity_id": identity_id,
+                    "node_count": len(nodes),
+                    "edge_count": len(edges),
+                    "source": "scan_pipeline",
+                    "timestamp": utc_now(),
+                }
+            },
+            upsert=True,
+        )
 
         suspicious_count = sum(1 for x in normalized if x.get("confidence_score", 0) < 0.65)
         total = max(len(normalized), 1)
@@ -141,9 +165,10 @@ async def process_scan_job(job: dict[str, Any]) -> None:
             "scan_id": scan_id,
             "user_id": user_id,
             "identity_id": identity_id,
+            "graph_version_id": graph_version_id,
             "raw_count": len(raw_signals),
             "normalized_count": len(normalized),
-            "graph": {"nodes": len(nodes), "edges": len(edges)},
+            "graph": {"nodes": len(nodes), "edges": len(edges), "version": graph_meta},
             "risk": risk.model_dump(),
             "completed_at": utc_now(),
         }

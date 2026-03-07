@@ -47,6 +47,9 @@ class GraphNode(BaseModel):
     suspicious: bool = False
     verified: bool = False
     metadata: dict = {}
+    confidence_score: float = 0.5
+    source: str = "scan_pipeline"
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
 class GraphEdge(BaseModel):
@@ -54,6 +57,9 @@ class GraphEdge(BaseModel):
     target: str
     relation: str
     score: float = 0.0
+    confidence_score: float = 0.5
+    source_ref: str = "scan_pipeline"
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
 class RiskScoreResponse(BaseModel):

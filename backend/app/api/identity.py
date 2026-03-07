@@ -1,4 +1,6 @@
 import json
+from datetime import datetime, timezone
+from uuid import uuid4
 from fastapi import APIRouter, Depends
 
 from app.models.schemas import IdentitySignal, ScanRequest
@@ -20,6 +22,8 @@ async def submit_signal(payload: IdentitySignal, user_id: str = Depends(get_curr
 
 @router.post("/scan")
 async def run_identity_scan(payload: ScanRequest, user_id: str = Depends(get_current_user_id)) -> dict:
+    scan_id = str(uuid4())
+    graph_version_id = f"gv-{scan_id}"
     nodes, edges = build_seed_twin(payload.root_username)
 
     # Enrich suspicious account signal with AI username similarity scoring.
@@ -27,7 +31,23 @@ async def run_identity_scan(payload: ScanRequest, user_id: str = Depends(get_cur
         if edge.relation == "username_similarity":
             edge.score = await username_similarity(payload.root_username, f"{payload.root_username}_real")
 
-    await upsert_graph(user_id, nodes, edges)
+    graph_meta = await upsert_graph(user_id, nodes, edges, graph_version_id=graph_version_id, scan_id=scan_id, source="manual_scan")
+    await db.mongo_db.graph_versions.update_one(
+        {"graph_version_id": graph_version_id, "user_id": user_id},
+        {
+            "$set": {
+                "graph_version_id": graph_version_id,
+                "scan_id": scan_id,
+                "user_id": user_id,
+                "identity_id": payload.root_username,
+                "node_count": len(nodes),
+                "edge_count": len(edges),
+                "source": "manual_scan",
+                "timestamp": datetime.now(timezone.utc),
+            }
+        },
+        upsert=True,
+    )
 
     risk = compute_risk(
         dup_prob=0.78,
@@ -35,12 +55,20 @@ async def run_identity_scan(payload: ScanRequest, user_id: str = Depends(get_cur
         deepfake=0.49,
         network=0.58,
     )
-    await db.mongo_db.scan_results.insert_one({"user_id": user_id, "risk": risk.model_dump(), "root": payload.root_username})
+    await db.mongo_db.scan_results.insert_one(
+        {
+            "user_id": user_id,
+            "risk": risk.model_dump(),
+            "root": payload.root_username,
+            "scan_id": scan_id,
+            "graph_version_id": graph_version_id,
+        }
+    )
 
     if db.redis_client:
         await db.redis_client.setex(f"risk:{user_id}", 60, json.dumps(risk.model_dump()))
 
-    return {"status": "completed", "nodes": len(nodes), "edges": len(edges), "risk": risk.model_dump()}
+    return {"status": "completed", "scan_id": scan_id, "graph_version_id": graph_version_id, "graph": graph_meta, "risk": risk.model_dump()}
 
 
 @router.get("/risk")

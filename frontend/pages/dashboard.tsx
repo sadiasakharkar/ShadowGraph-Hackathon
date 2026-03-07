@@ -15,18 +15,20 @@ export default function Dashboard() {
   const [risk, setRisk] = useState<any>({});
   const [alerts, setAlerts] = useState<any[]>([]);
   const [selectedNode, setSelectedNode] = useState<any>(null);
+  const [graphVersionId, setGraphVersionId] = useState<string>('');
 
   useEffect(() => {
     if (!ready) return;
 
     const loadAll = async () => {
       const [graphRes, riskRes, alertsRes] = await Promise.all([
-        api.get('/api/graph'),
+        api.get('/graph/latest'),
         api.get('/api/identity/risk'),
         api.get('/api/alerts')
       ]);
       setNodes(graphRes.data.nodes || []);
       setEdges(graphRes.data.edges || []);
+      setGraphVersionId(graphRes.data.graph_version_id || '');
       setRisk(riskRes.data.risk || {});
       setAlerts(alertsRes.data.alerts || []);
     };
@@ -44,6 +46,7 @@ export default function Dashboard() {
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <h2 className="mb-3 text-xl font-semibold">Identity Graph Intelligence</h2>
+          {graphVersionId ? <p className="mb-2 text-xs text-slate-400">Graph Version: {graphVersionId}</p> : null}
           <IdentityGraphScene nodes={nodes} edges={edges} onSelect={setSelectedNode} />
         </div>
         <div className="space-y-4">

@@ -7,7 +7,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import auth, identity, graph, alerts, ai, scan
+from app.api import auth, identity, graph, alerts, ai, scan, graph_public
+from app.graph.identity_graph import ensure_graph_schema
 from app.services import db
 from app.services.db import connect_all, close_all
 from app.services.scan_queue import start_scan_worker, stop_scan_worker
@@ -33,12 +34,14 @@ app.include_router(graph.router, prefix="/api/graph", tags=["graph"])
 app.include_router(alerts.router, prefix="/api/alerts", tags=["alerts"])
 app.include_router(ai.router, prefix="/api/ai", tags=["ai-proxy"])
 app.include_router(scan.router, tags=["scan"])
+app.include_router(graph_public.router, tags=["graph-versioned"])
 
 
 @app.on_event("startup")
 async def startup() -> None:
     logger.info("Starting backend services")
     await connect_all()
+    await ensure_graph_schema()
     await start_scan_worker()
 
 

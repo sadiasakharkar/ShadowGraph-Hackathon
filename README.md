@@ -58,6 +58,7 @@ ShadowGraph-Hackathon/
   - Identity ingestion (`/api/identity/signals`)
   - Identity scanning + twin generation (`/api/identity/scan`)
   - Async scan orchestration (`/scan/start`, `/scan/status`, `/scan/results`)
+  - Versioned graph APIs (`/graph/latest`, `/graph/version/{id}`)
   - Risk retrieval (`/api/identity/risk`)
   - Graph retrieval (`/api/graph`)
   - Alerts (`/api/alerts`)
@@ -102,6 +103,19 @@ Signals include username collision, profile image reuse, writing-style overlap, 
 - Normalized signals are stored in MongoDB collection: `normalized_identity_signals`.
 - Redis queue key `scan_jobs` powers async scan workers.
 - Graph engine consumes normalized signals to build Neo4j graph nodes/edges.
+
+## Graph Intelligence Engine
+
+- Neo4j typed schema:
+  - Nodes: `UserIdentity`, `Account`, `Image`, `TextArtifact`, `Repository`
+  - Edges: `HAS_ACCOUNT`, `HAS_IMAGE`, `SIMILAR_USERNAME`, `SIMILAR_IMAGE`, `SIMILAR_TEXT`, `CONNECTED_TO`
+- Every scan creates a graph snapshot version (`GraphVersion`) and links discovered entities to that version.
+- Every node and edge stores:
+  - `confidence_score`
+  - `source`
+  - `timestamp`
+- Version metadata is also persisted in MongoDB collection `graph_versions`.
+- Graph schema details: `docs/GRAPH_SCHEMA.md`.
 
 ## Environment Variables
 
