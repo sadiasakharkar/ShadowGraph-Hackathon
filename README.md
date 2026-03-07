@@ -112,10 +112,16 @@ docker compose up --build
 
 Services:
 
-- Frontend: [http://localhost:3000](http://localhost:3000)
-- Backend: [http://localhost:8000/docs](http://localhost:8000/docs)
-- AI Services: [http://localhost:8100/docs](http://localhost:8100/docs)
+- Frontend: [http://localhost:3001](http://localhost:3001)
+- Backend: [http://localhost:8001/docs](http://localhost:8001/docs)
+- AI Services: internal container service (reachable by backend at `http://ai-services:8100`)
 - Neo4j Browser: [http://localhost:7474](http://localhost:7474)
+
+Health endpoints:
+
+- Backend service: `GET /health/backend`
+- Database connectivity (MongoDB + Neo4j + Redis): `GET /health/database`
+- AI connectivity from backend: `GET /health/ai`
 
 ## Local Development (Without Docker)
 
@@ -150,6 +156,39 @@ uvicorn app.main:app --reload --port 8100
 3. Scan builds a digital twin and writes nodes/edges to Neo4j.
 4. Dashboard loads graph, risk score, and defense alerts.
 5. Click/hover nodes to inspect metadata.
+
+## API Smoke Test (End-to-End)
+
+The sequence below validates signup, login, signal ingestion, scan trigger, graph retrieval, risk retrieval, and alerts:
+
+```bash
+# 1) register
+curl -s -X POST http://localhost:8001/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"demo_user@shadowgraph.ai","password":"ShadowGraph123","full_name":"Demo User"}'
+
+# 2) login (copy access_token)
+curl -s -X POST http://localhost:8001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"demo_user@shadowgraph.ai","password":"ShadowGraph123"}'
+
+# 3) submit signal
+curl -s -X POST http://localhost:8001/api/identity/signals \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"platform":"github","username":"demoanalyst","profile_url":"https://github.com/demoanalyst","bio_text":"security engineer","image_url":"https://example.com/avatar.png"}'
+
+# 4) run scan
+curl -s -X POST http://localhost:8001/api/identity/scan \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"root_username":"demoanalyst","seed_platforms":["github","x","linkedin"]}'
+
+# 5) read graph/risk/alerts
+curl -s http://localhost:8001/api/graph -H "Authorization: Bearer <TOKEN>"
+curl -s http://localhost:8001/api/identity/risk -H "Authorization: Bearer <TOKEN>"
+curl -s http://localhost:8001/api/alerts -H "Authorization: Bearer <TOKEN>"
+```
 
 ## Seed Data
 

@@ -1,38 +1,54 @@
-version: '3.9'
-
 services:
   frontend:
     build:
       context: .
       dockerfile: infrastructure/docker/frontend.Dockerfile
     ports:
-      - '3000:3000'
+      - '3001:3000'
     environment:
-      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8001
       - NEXT_PUBLIC_GRAPH_POLL_SECONDS=8
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000', (r) => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 20s
+      timeout: 5s
+      retries: 8
 
   backend:
     build:
       context: .
       dockerfile: infrastructure/docker/backend.Dockerfile
     ports:
-      - '8000:8000'
+      - '8001:8000'
     env_file:
       - .env.example
     depends_on:
-      - mongodb
-      - neo4j
-      - redis
-      - ai-services
+      mongodb:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ai-services:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/backend', timeout=3).status==200 else 1)"]
+      interval: 20s
+      timeout: 5s
+      retries: 8
 
   ai-services:
     build:
       context: .
       dockerfile: infrastructure/docker/ai-services.Dockerfile
-    ports:
-      - '8100:8100'
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8100/health/ai', timeout=3).status==200 else 1)"]
+      interval: 20s
+      timeout: 5s
+      retries: 8
 
   mongodb:
     image: mongo:7
@@ -40,6 +56,11 @@ services:
       - '27017:27017'
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 20s
+      timeout: 7s
+      retries: 8
 
   neo4j:
     image: neo4j:5
@@ -50,11 +71,21 @@ services:
       - NEO4J_AUTH=neo4j/shadowgraph_password
     volumes:
       - neo4j_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:7474"]
+      interval: 20s
+      timeout: 10s
+      retries: 12
 
   redis:
     image: redis:7
     ports:
       - '6379:6379'
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 20s
+      timeout: 5s
+      retries: 8
 
 volumes:
   mongo_data:

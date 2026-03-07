@@ -1,4 +1,8 @@
 import hashlib
+import logging
+import os
+import time
+
 import numpy as np
 import torch
 from fastapi import FastAPI
@@ -7,6 +11,11 @@ from rapidfuzz import fuzz
 from sklearn.ensemble import IsolationForest
 
 app = FastAPI(title="ShadowGraph AI Services", version="1.0.0")
+logging.basicConfig(
+    level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO),
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+logger = logging.getLogger("shadowgraph.ai")
 
 
 class PairInput(BaseModel):
@@ -25,6 +34,20 @@ class FeaturesInput(BaseModel):
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok", "service": "ai-services"}
+
+
+@app.get("/health/ai")
+async def health_ai() -> dict:
+    return {"status": "ok", "service": "ai"}
+
+
+@app.middleware("http")
+async def request_logging_middleware(request, call_next):
+    started = time.perf_counter()
+    response = await call_next(request)
+    elapsed_ms = (time.perf_counter() - started) * 1000
+    logger.info("%s %s -> %s in %.2fms", request.method, request.url.path, response.status_code, elapsed_ms)
+    return response
 
 
 @app.post("/image-embedding")
