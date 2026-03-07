@@ -31,7 +31,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(identity.router, prefix="/api/identity", tags=["identity"])
 app.include_router(graph.router, prefix="/api/graph", tags=["graph"])
-app.include_router(alerts.router, prefix="/api/alerts", tags=["alerts"])
+app.include_router(alerts.router, tags=["alerts"])
 app.include_router(ai.router, prefix="/api/ai", tags=["ai-proxy"])
 app.include_router(scan.router, tags=["scan"])
 app.include_router(graph_public.router, tags=["graph-versioned"])

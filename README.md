@@ -62,7 +62,7 @@ ShadowGraph-Hackathon/
   - Threat simulation API (`/risk/analysis`)
   - Risk retrieval (`/api/identity/risk`)
   - Graph retrieval (`/api/graph`)
-  - Alerts (`/api/alerts`)
+  - Alerts and defense lifecycle (`/alerts`)
   - AI proxy routes (`/api/ai/*`)
 
 - AI Services (`FastAPI + PyTorch + sklearn`)
@@ -156,6 +156,21 @@ Signals include username collision, profile image reuse, writing-style overlap, 
   - recommended actions
 - API:
   - `GET /risk/analysis`
+
+## Autonomous Defense Workflow
+
+- Converts threat simulation and risk insights into actionable playbooks:
+  - report impersonation accounts
+  - enable multi-factor authentication
+  - secure exposed profiles
+- Alert lifecycle states:
+  - `open`
+  - `acknowledged`
+  - `resolved`
+- APIs:
+  - `GET /alerts`
+  - `POST /alerts/{id}/acknowledge`
+  - `POST /alerts/{id}/resolve`
 
 ## Environment Variables
 
@@ -254,7 +269,7 @@ curl -s -X POST http://localhost:8001/api/identity/scan \
 # 5) read graph/risk/alerts
 curl -s http://localhost:8001/api/graph -H "Authorization: Bearer <TOKEN>"
 curl -s http://localhost:8001/api/identity/risk -H "Authorization: Bearer <TOKEN>"
-curl -s http://localhost:8001/api/alerts -H "Authorization: Bearer <TOKEN>"
+curl -s http://localhost:8001/alerts -H "Authorization: Bearer <TOKEN>"
 ```
 
 ## Ingestion Scan Queue API

@@ -27,7 +27,7 @@ export default function Dashboard() {
       const [graphRes, riskRes, alertsRes, analysisRes] = await Promise.all([
         api.get('/graph/latest'),
         api.get('/api/identity/risk'),
-        api.get('/api/alerts'),
+        api.get('/alerts'),
         api.get('/risk/analysis')
       ]);
       setNodes(graphRes.data.nodes || []);
@@ -46,6 +46,20 @@ export default function Dashboard() {
     return () => clearInterval(timer);
   }, [ready]);
 
+  const acknowledgeAlert = async (alertId: string) => {
+    const res = await api.post(`/alerts/${alertId}/acknowledge`);
+    const updated = res.data?.alert;
+    if (!updated) return;
+    setAlerts((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+  };
+
+  const resolveAlert = async (alertId: string) => {
+    const res = await api.post(`/alerts/${alertId}/resolve`);
+    const updated = res.data?.alert;
+    if (!updated) return;
+    setAlerts((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+  };
+
   if (!ready) return null;
 
   return (
@@ -63,7 +77,7 @@ export default function Dashboard() {
         </div>
       </motion.div>
       <div className="mt-4">
-        <AlertsPanel alerts={alerts} />
+        <AlertsPanel alerts={alerts} onAcknowledge={acknowledgeAlert} onResolve={resolveAlert} />
       </div>
     </Layout>
   );
