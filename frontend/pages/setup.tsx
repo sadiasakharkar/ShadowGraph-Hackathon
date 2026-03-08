@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 import Layout from '../components/Layout';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
@@ -12,6 +13,14 @@ export default function Setup() {
   const [platforms, setPlatforms] = useState<string[]>(['github', 'x', 'linkedin']);
   const [scanDepth, setScanDepth] = useState<'standard' | 'deep'>('standard');
   const router = useRouter();
+  const coreRoutes: Record<string, string> = {
+    'CORE-01': 'core-01',
+    'CORE-02': 'core-02',
+    'CORE-03': 'core-03',
+    'CORE-04': 'core-04',
+    'CORE-05': 'core-05',
+    'CORE-06': 'core-06'
+  };
 
   if (!ready) return null;
 
@@ -184,6 +193,12 @@ export default function Setup() {
             <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">{item.tag}</p>
             <h3 className="mt-2 text-xl font-semibold text-slate-100">{item.title}</h3>
             <p className="mt-2 text-sm text-slate-300">{item.body}</p>
+            <Link
+              href={`/core/${coreRoutes[item.tag] || 'core-01'}`}
+              className="mt-4 inline-block rounded-lg border border-cyan-300/40 bg-black/25 px-3 py-2 text-xs uppercase tracking-[0.14em] text-cyan-100 transition hover:shadow-neon"
+            >
+              Open Module Demo
+            </Link>
           </motion.article>
         ))}
       </section>
