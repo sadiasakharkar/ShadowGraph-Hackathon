@@ -1,8 +1,9 @@
 {
   "model": "username_similarity_model",
   "dataset": "username_pairs.csv",
-  "samples": 350,
-  "precision": 0.9778,
-  "recall": 1.0,
-  "f1": 0.9888
+  "samples": 4000,
+  "accuracy": 0.976,
+  "precision": 0.9612,
+  "recall": 0.992,
+  "f1": 0.9764
 }

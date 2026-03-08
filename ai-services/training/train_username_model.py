@@ -6,8 +6,10 @@ import sys
 import joblib
 import numpy as np
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import precision_recall_fscore_support
+from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -37,17 +39,24 @@ def train() -> dict:
     x, y = load_rows()
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.25, random_state=42, stratify=y)
 
-    model = LogisticRegression(max_iter=300, random_state=42)
+    model = Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(max_iter=500, random_state=42, class_weight="balanced")),
+        ]
+    )
     model.fit(x_train, y_train)
 
     preds = model.predict(x_test)
     precision, recall, f1, _ = precision_recall_fscore_support(y_test, preds, average="binary", zero_division=0)
+    accuracy = accuracy_score(y_test, preds)
 
     joblib.dump(model, MODELS / "username_similarity_model.joblib")
     report = {
         "model": "username_similarity_model",
         "dataset": str(DATA.name),
         "samples": int(len(y)),
+        "accuracy": round(float(accuracy), 4),
         "precision": round(float(precision), 4),
         "recall": round(float(recall), 4),
         "f1": round(float(f1), 4),

@@ -5,9 +5,6 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 from rapidfuzz import fuzz
-import torch
-import torchvision.transforms as T
-from torchvision.models import resnet18, ResNet18_Weights
 
 
 def username_features(left: str, right: str) -> np.ndarray:
@@ -37,41 +34,67 @@ def _token_stats(text: str) -> tuple[float, float, float, float, float]:
     return avg_sentence_len, unique_ratio, avg_word_len, punct_ratio, uppercase_ratio
 
 
+def _char_ngram_jaccard(left: str, right: str, n: int = 3) -> float:
+    if len(left) < n or len(right) < n:
+        return 0.0
+    lset = {left[i : i + n] for i in range(len(left) - n + 1)}
+    rset = {right[i : i + n] for i in range(len(right) - n + 1)}
+    inter = len(lset & rset)
+    union = len(lset | rset)
+    return inter / max(union, 1)
+
+
 def text_pair_features(left: str, right: str) -> np.ndarray:
     lf = np.array(_token_stats(left), dtype=np.float32)
     rf = np.array(_token_stats(right), dtype=np.float32)
     diff = np.abs(lf - rf)
     cos = float(np.dot(lf, rf) / ((np.linalg.norm(lf) * np.linalg.norm(rf)) + 1e-8))
-    return np.concatenate([lf, rf, diff, np.array([cos], dtype=np.float32)], axis=0)
+    left_norm = left.lower().strip()
+    right_norm = right.lower().strip()
+    left_tokens = set(re.findall(r"[A-Za-z']+", left_norm))
+    right_tokens = set(re.findall(r"[A-Za-z']+", right_norm))
+    token_jaccard = len(left_tokens & right_tokens) / max(len(left_tokens | right_tokens), 1)
+    length_ratio = min(len(left_norm), len(right_norm)) / max(len(left_norm), len(right_norm), 1)
+    fuzz_ratio = fuzz.ratio(left_norm, right_norm) / 100.0
+    partial_ratio = fuzz.partial_ratio(left_norm, right_norm) / 100.0
+    trigram_jaccard = _char_ngram_jaccard(left_norm, right_norm, n=3)
+    return np.concatenate(
+        [
+            lf,
+            rf,
+            diff,
+            np.array([cos, token_jaccard, length_ratio, fuzz_ratio, partial_ratio, trigram_jaccard], dtype=np.float32),
+        ],
+        axis=0,
+    )
 
 
 class VisionEmbedder:
     def __init__(self) -> None:
-        self.device = torch.device("cpu")
-        try:
-            weights = ResNet18_Weights.IMAGENET1K_V1
-            model = resnet18(weights=weights)
-            self.transform = weights.transforms()
-        except Exception:
-            # Fallback when pretrained weights cannot be downloaded.
-            model = resnet18(weights=None)
-            self.transform = T.Compose(
-                [
-                    T.Resize((224, 224)),
-                    T.ToTensor(),
-                    T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-                ]
-            )
-
-        model.fc = torch.nn.Identity()
-        model.eval()
-        self.model = model.to(self.device)
+        # Lightweight deterministic image embedding to avoid runtime GPU/OpenMP issues in constrained environments.
+        self.resize = (96, 96)
 
     def embed_path(self, image_path: str) -> np.ndarray:
-        img = Image.open(Path(image_path)).convert("RGB")
-        tensor = self.transform(img).unsqueeze(0).to(self.device)
-        with torch.no_grad():
-            emb = self.model(tensor).squeeze(0).cpu().numpy().astype(np.float32)
+        img = Image.open(Path(image_path)).convert("RGB").resize(self.resize)
+        arr = np.asarray(img, dtype=np.float32) / 255.0
+
+        # Channel stats.
+        means = arr.mean(axis=(0, 1))
+        stds = arr.std(axis=(0, 1))
+
+        # Color distribution histograms.
+        hists = []
+        for c in range(3):
+            hist, _ = np.histogram(arr[:, :, c], bins=16, range=(0.0, 1.0), density=True)
+            hists.append(hist.astype(np.float32))
+
+        # Texture-like gradient magnitude summary.
+        gx = np.diff(arr, axis=1, append=arr[:, -1:, :])
+        gy = np.diff(arr, axis=0, append=arr[-1:, :, :])
+        grad = np.sqrt((gx**2 + gy**2).sum(axis=2))
+        grad_stats = np.array([grad.mean(), grad.std(), np.percentile(grad, 90)], dtype=np.float32)
+
+        emb = np.concatenate([means, stds] + hists + [grad_stats], axis=0).astype(np.float32)
         norm = np.linalg.norm(emb) + 1e-8
         return emb / norm
 
@@ -82,3 +105,23 @@ def image_pair_features(embedder: VisionEmbedder, image_a: str, image_b: str) ->
     cos = float(np.dot(ea, eb) / ((np.linalg.norm(ea) * np.linalg.norm(eb)) + 1e-8))
     l2 = float(np.linalg.norm(ea - eb))
     return np.array([cos, l2], dtype=np.float32)
+
+
+def image_pair_vector(embedder: VisionEmbedder, image_a: str, image_b: str) -> np.ndarray:
+    ea = embedder.embed_path(image_a)
+    eb = embedder.embed_path(image_b)
+    cos = float(np.dot(ea, eb) / ((np.linalg.norm(ea) * np.linalg.norm(eb)) + 1e-8))
+    l2 = float(np.linalg.norm(ea - eb))
+    l1 = float(np.abs(ea - eb).mean())
+    max_diff = float(np.max(np.abs(ea - eb)))
+    std_diff = float(np.std(ea - eb))
+    return np.concatenate(
+        [
+            ea,
+            eb,
+            np.abs(ea - eb),
+            ea * eb,
+            np.array([cos, l2, l1, max_diff, std_diff], dtype=np.float32),
+        ],
+        axis=0,
+    ).astype(np.float32)

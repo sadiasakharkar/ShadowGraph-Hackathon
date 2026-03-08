@@ -6,7 +6,7 @@ from functools import lru_cache
 import joblib
 import numpy as np
 
-from .features import username_features, text_pair_features, VisionEmbedder, image_pair_features
+from .features import username_features, text_pair_features, VisionEmbedder
 
 ROOT = Path(__file__).resolve().parents[2]
 MODELS = ROOT / "models"
@@ -58,9 +58,20 @@ def _materialize_image(image_ref: str) -> str:
 
 
 def predict_image_similarity(image_a: str, image_b: str) -> float:
-    model = image_model()
+    model_obj = image_model()
+    model = model_obj["model"] if isinstance(model_obj, dict) and "model" in model_obj else model_obj
     emb = embedder()
     a = _materialize_image(image_a)
     b = _materialize_image(image_b)
-    x = image_pair_features(emb, a, b).reshape(1, -1)
+    ea = emb.embed_path(a)
+    eb = emb.embed_path(b)
+    cos = float(np.dot(ea, eb) / ((np.linalg.norm(ea) * np.linalg.norm(eb)) + 1e-8))
+    l2 = float(np.linalg.norm(ea - eb))
+    l1 = float(np.abs(ea - eb).mean())
+    max_diff = float(np.max(np.abs(ea - eb)))
+    std_diff = float(np.std(ea - eb))
+    x = np.concatenate(
+        [ea, eb, np.abs(ea - eb), ea * eb, np.array([cos, l2, l1, max_diff, std_diff], dtype=np.float32)],
+        axis=0,
+    ).reshape(1, -1)
     return float(model.predict_proba(x)[0, 1])

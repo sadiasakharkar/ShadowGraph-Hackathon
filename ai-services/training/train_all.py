@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from build_datasets import ensure_dirs, build_username_dataset, build_text_dataset, build_image_dataset
+from build_datasets import ensure_dirs, build_username_dataset, build_text_dataset, build_image_dataset, TARGET_ROWS
 from train_username_model import train as train_username
 from train_text_model import train as train_text
 from train_image_model import train as train_image
@@ -25,8 +25,11 @@ def main() -> None:
     (REPORTS / "evaluation_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
     md = ["# Identity Fingerprinting Evaluation", ""]
+    md.append(f"- Dataset size per task: {TARGET_ROWS} rows")
+    md.append("")
     for key, value in summary.items():
         md.append(f"## {key.title()} Model")
+        md.append(f"- Accuracy: {value['accuracy']}")
         md.append(f"- Precision: {value['precision']}")
         md.append(f"- Recall: {value['recall']}")
         md.append(f"- F1: {value['f1']}")

@@ -1,8 +1,10 @@
 {
   "model": "image_similarity_model",
   "dataset": "image_pairs.csv",
-  "samples": 24,
+  "samples": 4000,
+  "decision_threshold": 0.51,
+  "accuracy": 0.998,
   "precision": 1.0,
-  "recall": 0.3333,
-  "f1": 0.5
+  "recall": 0.996,
+  "f1": 0.998
 }
