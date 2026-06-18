@@ -360,4 +360,3 @@ curl -s "http://localhost:8001/scan/results?scan_id=<SCAN_ID>" -H "Authorization
 - This MVP is designed for hackathon and demo usage; production hardening should add:
   - robust password policy and refresh token flow,
   - platform-specific legal compliance checks,
-  - signed scraping task queues and audit logging.
